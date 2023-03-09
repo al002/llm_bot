@@ -1,24 +1,26 @@
 use teloxide::prelude::*;
 
-use crate::{command_handlers::{SimpleCommand, commands_handler, group_message_handler, message_handler}, openai::OpenAI};
+use crate::{bot_handlers::{SimpleCommand, commands_handler, group_message_handler, message_handler}, openai::OpenAI};
 
 pub struct TelegramBot {
     bot: Bot,
+    openai: OpenAI,
 }
 
 impl TelegramBot {
-    pub fn new(token: String) -> TelegramBot {
+    pub fn new(token: String, openai: OpenAI) -> TelegramBot {
         TelegramBot {
             bot: Bot::new(token),
+            openai,
         }
     }
 
-    pub async fn run(self, _openai: OpenAI) {
+    pub async fn run(self) {
         let handler = Update::filter_message()
             .branch(
                 dptree::entry()
-                .filter_command::<SimpleCommand>()
-                .endpoint(commands_handler),
+                    .filter_command::<SimpleCommand>()
+                    .endpoint(commands_handler),
             )
             .branch(
                 dptree::filter(|msg: Message| msg.chat.is_group() || msg.chat.is_supergroup())
@@ -31,6 +33,7 @@ impl TelegramBot {
             .default_handler(|upd| async move {
                 log::warn!("Unhandled update: {:?}", upd);
             })
+            .dependencies(dptree::deps![self.openai])
             // If the dispatcher fails for some reason, execute this handler.
             .error_handler(LoggingErrorHandler::with_custom_text(
                 "An error has occurred in the dispatcher",

@@ -6,7 +6,7 @@ use openai::{OpenAI, OpenAIConfig};
 extern crate pretty_env_logger;
 extern crate log;
 
-mod command_handlers;
+mod bot_handlers;
 mod telegram_bot;
 mod openai;
 
@@ -15,7 +15,6 @@ async fn main() {
     dotenv().expect(".env file not found");
     pretty_env_logger::init_timed();
 
-    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap());
     let openai_config = OpenAIConfig {
         api_key: env::var("OPENAI_API_KEY").unwrap(),
         show_usage: env::var("SHOW_USAGE").unwrap_or(String::from("false")) == "true",
@@ -32,6 +31,7 @@ async fn main() {
     };
 
     let openai = OpenAI::new(openai_config);
-    bot.run(openai).await;
+    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap(), openai);
+    bot.run().await;
 }
 

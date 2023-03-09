@@ -1,8 +1,10 @@
 use std::error::Error;
 
-use async_openai::{Client, types::{CreateChatCompletionRequestArgs, ChatCompletionRequestMessageArgs, Role}};
+use async_openai::{Client, types::{CreateChatCompletionRequestArgs, ChatCompletionRequestMessageArgs}};
+use log::info;
 use teloxide::types::ChatId;
 
+#[derive(Clone)]
 pub struct OpenAIConfig {
     pub api_key: String,
     pub show_usage: bool,
@@ -18,6 +20,7 @@ pub struct OpenAIConfig {
     pub image_size: String,
 }
 
+#[derive(Clone)]
 pub struct OpenAI {
     pub client: Client,
     pub config: OpenAIConfig,
@@ -31,14 +34,13 @@ impl OpenAI {
         }
     }
 
-    pub async fn get_chat_response(self, chat_id: ChatId, query: String) -> Result<String, Box<dyn Error>> {
+    pub async fn get_chat_response(self, query: String) -> Result<String, Box<dyn Error>> {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(self.config.max_tokens)
             .model(self.config.model)
             .messages([
                 ChatCompletionRequestMessageArgs::default()
-                    // .role(Role::System)
-                    .content("You are a helpful assistant.")
+                    .content(query)
                     .build()?,
             ])
             .temperature(self.config.temperature)
@@ -51,9 +53,9 @@ impl OpenAI {
         let response = chat.create(request).await?;
 
         if response.choices.len() > 0 {
-            let anwser = response.choices[0].message.content.clone();
+            let answer = response.choices[0].message.content.clone();
 
-            return Ok(anwser);
+            return Ok(answer);
         } else {
             return Ok(String::from(""));
             // return Err(("An error has occurred, Please try again in a while."))
