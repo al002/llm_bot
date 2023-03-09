@@ -1,92 +1,37 @@
 use dotenvy::dotenv;
 use std::env;
-use teloxide::{prelude::*, utils::command::BotCommands, types::Me};
+use telegram_bot::TelegramBot;
+use openai::{OpenAI, OpenAIConfig};
 
 extern crate pretty_env_logger;
-#[macro_use] extern crate log;
+extern crate log;
 
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "Simple commands")]
-enum SimpleCommand {
-    #[command(description = "shows this message.")]
-    Help,
-    #[command(description = "shows your ID.")]
-    MyId,
-}
+mod command_handlers;
+mod telegram_bot;
+mod openai;
 
 #[tokio::main]
 async fn main() {
     dotenv().expect(".env file not found");
     pretty_env_logger::init_timed();
 
-    run(env::var("TELEGRAM_TOKEN").unwrap()).await;
-}
-
-async fn run(token: String) {
-    let bot = Bot::new(token);
-
-    let handler = Update::filter_message()
-        .branch(
-            dptree::entry()
-            .filter_command::<SimpleCommand>()
-            .endpoint(simple_commands_handler),
-        )
-        .branch(
-            dptree::filter(|msg: Message| msg.chat.is_group() || msg.chat.is_supergroup())
-            .endpoint(group_message_handler),
-        )
-        .endpoint(message_handler);
-
-    Dispatcher::builder(bot, handler)
-        // If no handler succeeded to handle an update, this closure will be called.
-        .default_handler(|upd| async move {
-            log::warn!("Unhandled update: {:?}", upd);
-        })
-        // If the dispatcher fails for some reason, execute this handler.
-        .error_handler(LoggingErrorHandler::with_custom_text(
-            "An error has occurred in the dispatcher",
-        ))
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
-}
-
-async fn simple_commands_handler(
-    bot: Bot,
-    _me: teloxide::types::Me,
-    msg: Message,
-    cmd: SimpleCommand,
-) -> Result<(), teloxide::RequestError> {
-    let text = match cmd {
-        SimpleCommand::Help => {
-            SimpleCommand::descriptions().to_string()
-        }
-        SimpleCommand::MyId => {
-            format!("{}", msg.from().unwrap().id)
-        }
+    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap());
+    let openai_config = OpenAIConfig {
+        api_key: env::var("OPENAI_API_KEY").unwrap(),
+        show_usage: env::var("SHOW_USAGE").unwrap_or(String::from("false")) == "true",
+        max_history_size: env::var("MAX_HISTORY_SIZE").unwrap_or(String::from("10")).parse::<u16>().unwrap_or(10),
+        max_conversation_age_minutes: env::var("MAX_CONVERSATION_AGE_MINUTES").unwrap_or(String::from("180")).parse::<u16>().unwrap_or(180),
+        assistant_prompt: env::var("ASSISTANT_PROMPT").unwrap_or(String::from("You are a helpful assistant.")),
+        max_tokens: env::var("MAX_TOKENS").unwrap_or(String::from("1200")).parse::<u16>().unwrap_or(1200),
+        model: String::from("gpt-3.5-turbo"),
+        temperature: 1,
+        n_choices: 1,
+        presence_penalty: 0.0,
+        frequency_penalty: 0.0,
+        image_size: String::from("512x512"),
     };
 
-    bot.send_message(msg.chat.id, text).await?;
-
-    Ok(())
+    let openai = OpenAI::new(openai_config);
+    bot.run(openai).await;
 }
 
-async fn group_message_handler(
-    _bot: Bot,
-    me: Me,
-    msg: Message,
-) -> Result<(), teloxide::RequestError> {
-    let text = msg.text().unwrap_or("");
-    if text.contains(&me.mention()) {
-        println!("mention");
-    } else {
-        println!("not mention");
-    }
-    Ok(())
-}
-
-async fn message_handler(bot: Bot, me: Me, msg: Message) -> Result<(), teloxide::RequestError> {
-    bot.send_message(msg.chat.id, me.username()).await?;
-    Ok(())
-}
