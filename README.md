@@ -18,3 +18,6 @@ cd llm_bot
 
 cargo run
 ```
+
+### Use custom LLM
+

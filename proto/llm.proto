@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package llm;
+
+service LLM {
+  rpc query(LLMRequest) returns (LLMReply) {}
+}
+
+message LLMRequest {
+  string query = 1;
+}
+
+message LLMReply {
+  string response = 1;
+}

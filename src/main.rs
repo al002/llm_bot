@@ -1,4 +1,5 @@
 use dotenvy::dotenv;
+use llm_rpc_client::LLMRpcClient;
 use std::env;
 use telegram_bot::TelegramBot;
 use openai::{OpenAI, OpenAIConfig};
@@ -6,12 +7,18 @@ use openai::{OpenAI, OpenAIConfig};
 extern crate pretty_env_logger;
 extern crate log;
 
+pub mod llm {
+    tonic::include_proto!("llm");
+}
+
 mod bot_handlers;
 mod telegram_bot;
 mod openai;
+mod llm_rpc_client;
+
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().expect(".env file not found");
     pretty_env_logger::init_timed();
 
@@ -30,8 +37,11 @@ async fn main() {
         image_size: String::from("512x512"),
     };
 
+    let rpc_client = LLMRpcClient::new(String::from("http://[::1]:50051")).await;
     let openai = OpenAI::new(openai_config);
-    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap(), openai);
+    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap(), openai, rpc_client);
     bot.run().await;
+
+    Ok(())
 }
 

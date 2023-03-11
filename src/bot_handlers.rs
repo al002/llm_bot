@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use teloxide::{prelude::*, utils::command::BotCommands, types::Me };
+use tokio::sync::Mutex;
 
-use crate::openai::{OpenAI, ChatDialogue };
+use crate::{openai::{OpenAI, ChatDialogue }, llm_rpc_client::LLMRpcClient, llm::LlmRequest};
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "Simple commands")]
@@ -35,8 +36,9 @@ pub async fn commands_handler(
 }
 
 pub async fn prompt(
-    openai: Arc<OpenAI>,
-    dialogue: ChatDialogue,
+    _openai: Arc<OpenAI>,
+    llm_rpc_client: Arc<Mutex<LLMRpcClient>>,
+    _dialogue: ChatDialogue,
     bot: Bot,
     me: Me,
     msg: Message,
@@ -46,9 +48,15 @@ pub async fn prompt(
         return Ok(());
     }
 
-    let response = openai.get_chat_response(msg.chat.id, dialogue, text.to_string()).await.unwrap();
-    
-    bot.send_message(msg.chat.id, response).await?;
+    let resposne = llm_rpc_client.lock().await.client.query(LlmRequest {
+        query: text.to_string(),
+    }).await.unwrap();
+    bot.send_message(msg.chat.id, resposne.get_ref().response.clone()).await?;
+
+    // uncomment below to use builtin openai
+    // let response = openai.get_chat_response(msg.chat.id, dialogue, text.to_string()).await.unwrap();
+    //
+    // bot.send_message(msg.chat.id, response.clone()).await?;
     Ok(())
 }
 

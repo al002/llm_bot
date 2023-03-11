@@ -11,6 +11,11 @@ chrono = "0.4.23"
 dotenvy = "0.15.6"
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
+prost = "0.11.8"
 serde = { version = "1.0.154", features = ["derive"] }
 teloxide = { version = "0.12.2", features = ["macros", "redis-storage", "sqlite-storage", "bincode-serializer"] }
 tokio = { version = "1.26.0", features = ["rt-multi-thread", "macros"] }
+tonic = "0.8.3"
+
+[build-dependencies]
+tonic-build = "0.8.3"
