@@ -20,4 +20,4 @@ cargo run
 ```
 
 ### Use custom LLM
-
+Just connect to [https://github.com/al002/programming_llm](https://github.com/al002/programming_llm) or any other gRPC server that provide same functionality.
