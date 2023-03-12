@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use log::info;
 use teloxide::{prelude::*, utils::command::BotCommands, types::Me };
 use tokio::sync::Mutex;
 
@@ -10,12 +11,15 @@ use crate::{openai::{OpenAI, ChatDialogue }, llm_rpc_client::LLMRpcClient, llm::
 pub enum SimpleCommand {
     #[command(description = "shows this message.")]
     Help,
+    #[command(description = "reset chat history")]
+    Reset,
     #[command(description = "shows your ID.")]
     MyId,
 }
 
 pub async fn commands_handler(
-    _openai: &OpenAI,
+    openai: Arc<OpenAI>,
+    dialogue: ChatDialogue,
     bot: Bot,
     _me: teloxide::types::Me,
     msg: Message,
@@ -24,6 +28,10 @@ pub async fn commands_handler(
     let text = match cmd {
         SimpleCommand::Help => {
             SimpleCommand::descriptions().to_string()
+        }
+        SimpleCommand::Reset => {
+            info!("Resetting the conversation history for user {}", msg.chat.username().unwrap());
+            reset(openai, msg.chat.id, dialogue).await
         }
         SimpleCommand::MyId => {
             format!("{}", msg.from().unwrap().id)
@@ -58,6 +66,22 @@ pub async fn prompt(
     //
     // bot.send_message(msg.chat.id, response.clone()).await?;
     Ok(())
+}
+
+pub async fn reset(
+    openai: Arc<OpenAI>,
+    chat_id: ChatId,
+    dialogue: ChatDialogue,
+) -> String {
+    let state = &mut dialogue.get().await.unwrap().unwrap();
+    openai.reset_chat_history(chat_id, state);
+    let update_result = dialogue.update(state.to_owned()).await;
+
+    if update_result.is_err() {
+        return String::from("Reset error");
+    }
+
+    String::from("Done")
 }
 
 pub async fn transcribe(
