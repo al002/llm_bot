@@ -44,9 +44,9 @@ pub async fn commands_handler(
 }
 
 pub async fn prompt(
-    _openai: Arc<OpenAI>,
-    llm_rpc_client: Arc<Mutex<LLMRpcClient>>,
-    _dialogue: ChatDialogue,
+    openai: Arc<OpenAI>,
+    // llm_rpc_client: Arc<Mutex<LLMRpcClient>>,
+    dialogue: ChatDialogue,
     bot: Bot,
     me: Me,
     msg: Message,
@@ -56,15 +56,15 @@ pub async fn prompt(
         return Ok(());
     }
 
-    let resposne = llm_rpc_client.lock().await.client.query(LlmRequest {
-        query: text.to_string(),
-    }).await.unwrap();
-    bot.send_message(msg.chat.id, resposne.get_ref().response.clone()).await?;
+    // let resposne = llm_rpc_client.lock().await.client.query(LlmRequest {
+    //     query: text.to_string(),
+    // }).await.unwrap();
+    // bot.send_message(msg.chat.id, resposne.get_ref().response.clone()).await?;
 
     // uncomment below to use builtin openai
-    // let response = openai.get_chat_response(msg.chat.id, dialogue, text.to_string()).await.unwrap();
-    //
-    // bot.send_message(msg.chat.id, response.clone()).await?;
+    let response = openai.get_chat_response(msg.chat.id, dialogue, text.to_string()).await.unwrap();
+
+    bot.send_message(msg.chat.id, response.clone()).await?;
     Ok(())
 }
 

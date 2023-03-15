@@ -1,22 +1,19 @@
 use std::sync::Arc;
 
 use teloxide::{prelude::*, dispatching::dialogue::{ErasedStorage, RedisStorage, SqliteStorage, Storage, serializer::{Json, Bincode}}};
-use tokio::sync::Mutex;
 
-use crate::{bot_handlers::{SimpleCommand, commands_handler, prompt, transcribe }, openai::{OpenAI, ChatState, ChatStorage}, llm_rpc_client::LLMRpcClient};
+use crate::{bot_handlers::{SimpleCommand, commands_handler, prompt, transcribe }, openai::{OpenAI, ChatState, ChatStorage}};
 
 pub struct TelegramBot {
     bot: Bot,
     openai: OpenAI,
-    llm_rpc_client: LLMRpcClient,
 }
 
 impl TelegramBot {
-    pub fn new(token: String, openai: OpenAI, rpc_client: LLMRpcClient) -> TelegramBot {
+    pub fn new(token: String, openai: OpenAI) -> TelegramBot {
         TelegramBot {
             bot: Bot::new(token),
             openai,
-            llm_rpc_client: rpc_client,
         }
     }
 
@@ -43,14 +40,13 @@ impl TelegramBot {
             );
 
         let openai = Arc::new(self.openai);
-        let llm_rpc_client = Arc::new(Mutex::new(self.llm_rpc_client));
 
         Dispatcher::builder(self.bot, handler)
             // If no handler succeeded to handle an update, this closure will be called.
             .default_handler(|upd| async move {
                 log::warn!("Unhandled update: {:?}", upd);
             })
-            .dependencies(dptree::deps![openai, llm_rpc_client, storage])
+            .dependencies(dptree::deps![openai, storage])
             // If the dispatcher fails for some reason, execute this handler.
             .error_handler(LoggingErrorHandler::with_custom_text(
                 "An error has occurred in the dispatcher",

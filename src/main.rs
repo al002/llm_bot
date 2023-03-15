@@ -1,5 +1,4 @@
 use dotenvy::dotenv;
-use llm_rpc_client::LLMRpcClient;
 use std::env;
 use telegram_bot::TelegramBot;
 use openai::{OpenAI, OpenAIConfig};
@@ -37,9 +36,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         image_size: String::from("512x512"),
     };
 
-    let rpc_client = LLMRpcClient::new(String::from("http://[::1]:50051")).await;
+    // let rpc_client = LLMRpcClient::new(String::from("http://[::1]:50051")).await;
     let openai = OpenAI::new(openai_config);
-    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap(), openai, rpc_client);
+    let bot = TelegramBot::new(env::var("TELEGRAM_BOT_TOKEN").unwrap(), openai);
     bot.run().await;
 
     Ok(())
